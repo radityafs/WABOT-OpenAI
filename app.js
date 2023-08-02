@@ -1,14 +1,20 @@
 import { makeWASocket } from "@whiskeysockets/baileys";
-
 import {
   useMultiFileAuthState,
   DisconnectReason,
 } from "@whiskeysockets/baileys";
 import { Configuration, OpenAIApi } from "openai";
 import chalk from "chalk";
+import dotenv from "dotenv";
+dotenv.config();
+
+if (!process.env.API_KEY) {
+  console.log(chalk.red("Please add your OpenAI API key to the .env file."));
+  process.exit(1);
+}
 
 const configuration = new Configuration({
-  apiKey: "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",
+  apiKey: process.env.API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
@@ -18,7 +24,7 @@ async function connectToWhatsApp() {
     auth: state,
     printQRInTerminal: true,
   });
-  // this will be called as soon as the credentials are updated
+
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", (update) => {
@@ -42,8 +48,8 @@ async function connectToWhatsApp() {
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const m = messages[0];
 
-    if (!m.message) return; // if there is no text or media message
-    const messageType = Object.keys(m.message)[0]; // get what type of message it is -- text, image, video
+    if (!m.message) return;
+    const messageType = Object.keys(m.message)[0];
 
     if (
       messageType === "conversation" ||

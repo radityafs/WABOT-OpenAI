@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "description": "Javascript Example of Whatsapp Baileys",
   "main": "app.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@adiwajshing/baileys": "^4.4.0",
+    "@whiskeysockets/baileys": "^6.4.0",
+    "chalk": "^5.3.0",
     "jimp": "^0.16.2",
     "link-preview-js": "^3.0.4",
     "openai": "^3.1.0",

@@ -2,10 +2,12 @@ import { makeWASocket } from "@whiskeysockets/baileys";
 import {
   useMultiFileAuthState,
   DisconnectReason,
+  Browsers,
 } from "@whiskeysockets/baileys";
-import { Configuration, OpenAIApi } from "openai";
 import chalk from "chalk";
 import dotenv from "dotenv";
+import chatGPT from "./features/chatgpt.js";
+import sendSticker from "./features/sticker.js";
 dotenv.config();
 
 if (!process.env.API_KEY) {
@@ -13,16 +15,12 @@ if (!process.env.API_KEY) {
   process.exit(1);
 }
 
-const configuration = new Configuration({
-  apiKey: process.env.API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
 async function connectToWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info_baileys");
   const sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,
+    browser: Browsers.appropriate("Desktop"),
   });
 
   sock.ev.on("creds.update", saveCreds);
@@ -45,59 +43,46 @@ async function connectToWhatsApp() {
       console.log("opened connection");
     }
   });
+
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const m = messages[0];
 
     if (!m.message) return;
-    const messageType = Object.keys(m.message)[0];
+    if (m.key.fromMe) return;
 
-    if (
-      messageType === "conversation" ||
-      messageType === "extendedTextMessage"
-    ) {
-      if (typeof m.key.remoteJid !== "undefined" && m.key.remoteJid !== null) {
-        try {
-          const senderId = m.key.remoteJid;
-          const senderMessage =
-            m.message.conversation || m.message.extendedTextMessage.text;
+    if (typeof m.key.remoteJid !== "undefined" && m.key.remoteJid !== null) {
+      try {
+        const messageType = Object.keys(m.message)[0];
 
-          const command = senderMessage?.toLowerCase()?.substring(0, 4);
-          const message = senderMessage?.toLowerCase()?.substring(5);
+        const senderId = m.key.remoteJid;
+        const senderMessage =
+          m.message?.conversation ||
+          m.message?.extendedTextMessage?.text ||
+          m.message?.imageMessage?.caption;
 
+        const command = senderMessage?.match(/![a-z]+/)?.[0];
+
+        // Text Message
+        if (
+          messageType === "conversation" ||
+          messageType === "extendedTextMessage"
+        ) {
+          const message = senderMessage?.replace(command, "").trim();
           if (command === "!ask") {
-            const completion = await openai.createCompletion({
-              model: "text-davinci-003",
-              prompt: message,
-              temperature: 0.5,
-              max_tokens: 1024,
-              top_p: 0.3,
-              frequency_penalty: 0.5,
-              presence_penalty: 0.0,
-            });
-
-            const responseMessage = completion.data.choices[0].text;
-            await sock.sendMessage(senderId, { text: responseMessage.trim() });
-
-            console.log(
-              chalk.green(
-                `[!ask] ${senderId} asked ${message} and got ${responseMessage} as a response.`
-              )
-            );
-          } else {
-            if (m.key.fromMe) return;
-
-            console.log(
-              chalk.red(
-                `[chat] ${senderId} sent ${senderMessage} [ ${messageType}]`
-              )
-            );
+            chatGPT(sock, senderId, message);
           }
-        } catch (error) {
-          console.log(`Got an error: ${error}`);
+
+          // Image Message
+        } else if (messageType === "imageMessage") {
+          if (command === "!sticker") {
+            sendSticker(sock, senderId, m);
+          }
         }
+      } catch (error) {
+        console.log(`Got an error: ${error}`);
       }
     }
   });
 }
-// run in main file
+
 connectToWhatsApp();

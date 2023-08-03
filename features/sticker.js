@@ -1,7 +1,7 @@
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
 import { Sticker, StickerTypes } from "wa-sticker-formatter";
 
-export default async function sendSticker(instance, sender, message) {
+export default async function mediaToSticker(instance, sender, message) {
   try {
     const buffer = await downloadMediaMessage(message, "buffer", {});
 

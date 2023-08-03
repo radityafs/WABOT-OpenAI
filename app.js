@@ -5,10 +5,8 @@ import {
   Browsers,
 } from "@whiskeysockets/baileys";
 import chalk from "chalk";
-import dotenv from "dotenv";
 import chatGPT from "./features/chatgpt.js";
-import sendSticker from "./features/sticker.js";
-dotenv.config();
+import mediaToSticker from "./features/sticker.js";
 
 if (!process.env.API_KEY) {
   console.log(chalk.red("Please add your OpenAI API key to the .env file."));
@@ -75,7 +73,7 @@ async function connectToWhatsApp() {
           // Image Message
         } else if (messageType === "imageMessage") {
           if (command === "!sticker") {
-            sendSticker(sock, senderId, m);
+            mediaToSticker(sock, senderId, m);
           }
         }
       } catch (error) {
